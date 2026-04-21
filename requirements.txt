@@ -1,0 +1,5 @@
+flask
+requests
+pywebview
+yt-dlp
+pyinstaller

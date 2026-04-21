@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FDM – Download Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #080b10;
+  --s1:    #0d1219;
+  --s2:    #111722;
+  --s3:    #161e2d;
+  --bd:    #1e2d42;
+  --bd2:   #243347;
+  --acc:   #0ea5e9;
+  --acc2:  #38bdf8;
+  --grn:   #10b981;
+  --red:   #f43f5e;
+  --ylw:   #f59e0b;
+  --pur:   #8b5cf6;
+  --cyn:   #06b6d4;
+  --orng:  #f97316;
+  --txt:   #e2e8f0;
+  --dim:   #7c93b0;
+  --muted: #3d5470;
+  --mono:  'JetBrains Mono', monospace;
+  --sans:  'Syne', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--txt);
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px;
+  user-select:none;-webkit-font-smoothing:antialiased}
+
+/* ─── TITLEBAR ─────────────────────────────────────── */
+#tb{
+  background:linear-gradient(90deg,#060c18 0%,#0a1525 50%,#060c18 100%);
+  height:46px;display:flex;align-items:center;padding:0 16px;
+  border-bottom:1px solid #0d1e33;flex-shrink:0;gap:14px;
+  position:relative;
+}
+#tb::after{
+  content:'';position:absolute;inset:0 0 -1px 0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(14,165,233,.08) 0%,transparent 100%);
+}
+#logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;
+  letter-spacing:-.3px;color:#fff}
+#logo svg{flex-shrink:0}
+#logo span{color:var(--acc2)}
+.pill{
+  padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;
+  letter-spacing:.5px;border:1px solid;cursor:default;
+  font-family:var(--mono)
+}
+.pill-ytdlp{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn)}
+.pill-tor{background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3);color:var(--pur)}
+.pill-off{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.2);color:#f43f5e;opacity:.5}
+#tbright{margin-left:auto;display:flex;align-items:center;gap:8px}
+#dirlabel{font-family:var(--mono);font-size:10px;color:var(--muted)}
+
+/* ─── TOOLBAR ──────────────────────────────────────── */
+#tools{
+  background:var(--s1);height:46px;display:flex;align-items:center;
+  padding:0 10px;border-bottom:1px solid var(--bd);gap:2px;flex-shrink:0;
+}
+.t{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:5px;
+  cursor:pointer;transition:all .15s;border:1px solid transparent;
+  font-size:11.5px;color:var(--dim);font-weight:600}
+.t:hover{background:var(--s3);border-color:var(--bd);color:var(--txt)}
+.t:active{transform:scale(.96)}
+.t svg{width:14px;height:14px;flex-shrink:0}
+.tsep{width:1px;height:24px;background:var(--bd);margin:0 4px}
+.t.danger:hover{background:rgba(244,63,94,.1);border-color:rgba(244,63,94,.3);color:var(--red)}
+
+/* ─── LAYOUT ───────────────────────────────────────── */
+#layout{display:flex;flex:1;overflow:hidden}
+
+/* ─── SIDEBAR ──────────────────────────────────────── */
+#side{
+  width:190px;background:var(--s1);border-right:1px solid var(--bd);
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.sh{
+  padding:14px 14px 5px;font-size:9px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);font-family:var(--mono)
+}
+.si{
+  padding:7px 14px;display:flex;align-items:center;gap:9px;cursor:pointer;
+  color:var(--dim);border-left:2px solid transparent;transition:all .15s;
+  font-size:12px;font-weight:600;
+}
+.si:hover{background:var(--s2);color:var(--txt)}
+.si.on{background:linear-gradient(90deg,rgba(14,165,233,.12),transparent);
+  color:var(--acc2);border-left-color:var(--acc)}
+.si svg{width:13px;height:13px;flex-shrink:0}
+.bx{
+  margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:2px 6px;border-radius:10px;
+}
+.bx-def{background:rgba(14,165,233,.2);color:var(--acc2)}
+.bx-grn{background:rgba(16,185,129,.2);color:var(--grn)}
+.bx-red{background:rgba(244,63,94,.2);color:var(--red)}
+
+/* ─── MAIN CONTENT ─────────────────────────────────── */
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ─── URL BAR ──────────────────────────────────────── */
+#addbar{
+  background:var(--s2);border-bottom:1px solid var(--bd);
+  padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;
+}
+.ic{
+  display:flex;align-items:center;gap:6px;padding:6px 12px;
+  background:var(--bg);border:1px solid var(--bd);border-radius:5px;
+  cursor:pointer;transition:all .15s;font-size:11px;color:var(--dim);
+  font-weight:600;white-space:nowrap;
+}
+.ic:hover{border-color:var(--bd2);color:var(--txt);background:var(--s3)}
+.ic svg{width:13px;height:13px}
+#urlin{
+  flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:5px;
+  padding:7px 12px;color:var(--txt);font-family:var(--mono);font-size:11.5px;
+  outline:none;transition:.2s;
+}
+#urlin:focus{border-color:var(--acc)}
+#urlin::placeholder{color:var(--muted)}
+.btn-add{
+  padding:6px 16px;border-radius:5px;border:none;cursor:pointer;
+  font-family:var(--sans);font-size:12px;font-weight:700;transition:all .15s;
+  background:linear-gradient(135deg,#0284c7,#0ea5e9);color:#fff;
+  box-shadow:0 0 14px rgba(14,165,233,.3);
+}
+.btn-add:hover{background:linear-gradient(135deg,#0369a1,#0284c7);
+  box-shadow:0 0 20px rgba(14,165,233,.45)}
+.btn-add:active{transform:scale(.97)}
+
+/* ─── TABLE AREA ───────────────────────────────────── */
+#twrap{flex:1;overflow-y:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--s1);position:sticky;top:0;z-index:10;
+  border-bottom:2px solid var(--bd)}
+th{padding:8px 10px;text-align:left;font-size:9.5px;font-weight:700;
+  color:var(--muted);white-space:nowrap;letter-spacing:.8px;text-transform:uppercase;
+  font-family:var(--mono)}
+tbody tr{border-bottom:1px solid #0d1422;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#0d1625}
+tbody tr.sel{background:linear-gradient(90deg,rgba(14,165,233,.08),transparent)}
+tbody tr.sel td:first-child{border-left:2px solid var(--acc)}
+td{padding:7px 10px;font-size:12px;color:var(--dim);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:0;font-family:var(--mono)}
+.cname{width:34%}.csz{width:7%}.cprog{width:17%}.cspd{width:9%}
+.ceta{width:7%}.cstat{width:9%}.ckind{width:7%}.cadd{width:10%}
+
+/* ─── STATUS BADGES ────────────────────────────────── */
+.sb{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:3px;font-size:9.5px;font-weight:700;font-family:var(--mono);
+  letter-spacing:.3px}
+.sb::before{content:'';width:5px;height:5px;border-radius:50%}
+.sb-downloading{background:rgba(14,165,233,.15);color:var(--acc2)}
+.sb-downloading::before{background:var(--acc);box-shadow:0 0 5px var(--acc);animation:p 1.2s infinite}
+.sb-queued{background:rgba(245,158,11,.1);color:var(--ylw)}
+.sb-queued::before{background:var(--ylw)}
+.sb-paused{background:rgba(124,147,176,.1);color:var(--dim)}
+.sb-paused::before{background:var(--dim)}
+.sb-complete{background:rgba(16,185,129,.12);color:var(--grn)}
+.sb-complete::before{background:var(--grn)}
+.sb-error{background:rgba(244,63,94,.12);color:var(--red)}
+.sb-error::before{background:var(--red)}
+.sb-connecting{background:rgba(139,92,246,.12);color:var(--pur)}
+.sb-connecting::before{background:var(--pur);animation:p 1.2s infinite}
+.sb-merging{background:rgba(6,182,212,.12);color:var(--cyn)}
+.sb-merging::before{background:var(--cyn);animation:p .8s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ─── PROGRESS BAR ─────────────────────────────────── */
+.pw{width:100%;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.pf{height:100%;border-radius:3px;transition:width .6s ease}
+.pf.act{background:linear-gradient(90deg,#0369a1,#38bdf8);
+  position:relative;overflow:hidden}
+.pf.act::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
+  animation:sh 1.4s infinite}
+@keyframes sh{from{transform:translateX(-200%)}to{transform:translateX(200%)}}
+.pf.done{background:linear-gradient(90deg,#059669,#34d399)}
+.pf.pause{background:#334155}
+.pf.err{background:#9f1239}
+.pf.conn{background:linear-gradient(90deg,#4c1d95,#7c3aed);
+  position:relative;overflow:hidden}
+.pf.conn::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  animation:sh 1.1s infinite}
+.pf.merg{background:linear-gradient(90deg,#0e7490,#06b6d4)}
+.pt{font-size:9.5px;color:var(--muted);margin-top:2px}
+
+/* ─── KIND BADGES ──────────────────────────────────── */
+.kb{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;
+  font-size:9px;font-weight:700;font-family:var(--mono)}
+.kb-direct{background:rgba(14,165,233,.12);color:var(--acc2);border:1px solid rgba(14,165,233,.2)}
+.kb-stream{background:rgba(244,63,94,.1);color:#fb7185;border:1px solid rgba(244,63,94,.2)}
+.kb-torrent{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2)}
+
+/* ─── BOTTOM PANEL ─────────────────────────────────── */
+#bot{
+  background:var(--s1);border-top:1px solid var(--bd);
+  height:150px;display:flex;flex-shrink:0;
+}
+#detail{flex:1;padding:10px 14px;overflow-y:auto}
+#dtitle{font-size:11px;color:var(--dim);margin-bottom:9px;
+  display:flex;align-items:center;gap:6px;font-weight:700}
+.dg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 14px}
+.di label{font-size:9px;color:var(--muted);display:block;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+.di span{font-size:11.5px;color:var(--txt);font-family:var(--mono);
+  word-break:break-all;line-height:1.3}
+
+#spanel{width:220px;border-left:1px solid var(--bd);padding:10px 14px;
+  display:flex;flex-direction:column;gap:6px}
+#spanel h4{font-size:9px;color:var(--muted);letter-spacing:1.2px;
+  text-transform:uppercase;font-family:var(--mono)}
+#sc{width:100%;height:58px;border-radius:4px;background:var(--bg)}
+.ss{display:flex;justify-content:space-between;font-size:10.5px;font-family:var(--mono)}
+.ss span{color:var(--muted)}.ss b{color:var(--acc2)}
+
+/* ─── STATUS BAR ───────────────────────────────────── */
+#sbar{
+  background:#04080f;height:24px;border-top:1px solid #0a1220;
+  display:flex;align-items:center;padding:0 14px;gap:20px;flex-shrink:0;
+  font-family:var(--mono);font-size:10.5px;
+}
+.sbi{display:flex;align-items:center;gap:5px;color:var(--muted)}
+.sbi b{color:var(--txt)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot.on{background:var(--grn);box-shadow:0 0 7px var(--grn);animation:p 1.5s infinite}
+.dot.off{background:var(--muted)}
+#sbar-right{margin-left:auto;color:var(--muted);font-size:10px}
+
+/* ─── MODAL ────────────────────────────────────────── */
+#mo{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;
+  align-items:center;justify-content:center;z-index:100;
+  backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:.2s}
+#mo.show{opacity:1;pointer-events:all}
+#modal{
+  background:var(--s2);border:1px solid var(--bd2);border-radius:10px;
+  width:520px;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 1px rgba(14,165,233,.1);
+  transform:translateY(16px) scale(.96);transition:transform .22s;
+}
+#mo.show #modal{transform:none}
+.mh{padding:14px 18px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px}
+.mb{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.fg label{display:block;font-size:10px;color:var(--muted);margin-bottom:5px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono)}
+.fg input,.fg select{
+  width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:5px;
+  padding:8px 11px;color:var(--txt);font-family:var(--mono);font-size:12px;
+  outline:none;transition:.2s;
+}
+.fg input:focus,.fg select:focus{border-color:var(--acc);
+  box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+.fg select option{background:var(--s2)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mf{padding:12px 18px;border-top:1px solid var(--bd);
+  display:flex;gap:9px;justify-content:flex-end}
+.mf-cancel{padding:7px 16px;border-radius:5px;border:1px solid var(--bd2);
+  cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;
+  background:transparent;color:var(--dim);transition:.15s}
+.mf-cancel:hover{background:var(--s3);color:var(--txt)}
+/* hint row */
+#url-hint{font-family:var(--mono);font-size:10px;color:var(--muted);
+  display:none;gap:8px}
+#url-hint span{padding:2px 8px;border-radius:3px;font-weight:600;border:1px solid}
+
+/* ─── CONTEXT MENU ─────────────────────────────────── */
+#ctx{position:fixed;background:var(--s2);border:1px solid var(--bd2);
+  border-radius:6px;padding:4px 0;box-shadow:0 12px 36px rgba(0,0,0,.6);
+  z-index:200;min-width:175px;display:none}
+.ci{padding:7px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:12px;color:var(--dim);transition:.12s;font-weight:600}
+.ci:hover{background:var(--s3);color:var(--txt)}
+.ci svg{width:12px;height:12px}
+.ci.d:hover{background:rgba(244,63,94,.08);color:var(--red)}
+.csep{height:1px;background:var(--bd);margin:3px 0}
+
+/* ─── TOAST ────────────────────────────────────────── */
+#toast{position:fixed;bottom:34px;right:18px;z-index:300;
+  display:flex;flex-direction:column;gap:6px}
+.tn{background:var(--s2);border:1px solid var(--bd2);border-radius:5px;
+  padding:9px 14px;font-size:12px;color:var(--txt);
+  box-shadow:0 6px 24px rgba(0,0,0,.5);
+  animation:tin .2s ease;font-family:var(--mono)}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* ─── EMPTY ────────────────────────────────────────── */
+#empty{display:none;flex-direction:column;align-items:center;
+  justify-content:center;padding:70px 20px;color:var(--muted);gap:12px}
+#empty svg{opacity:.2}
+#empty h3{font-size:16px;font-weight:700;color:var(--dim)}
+#empty p{font-size:12px;font-family:var(--mono)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--bd2)}
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="tb">
+  <div id="logo">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#0369a1"/>
+      <path d="M14 5v12M14 17l-5-5m5 5l5-5M5 22h18" stroke="#fff"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    FDM<span>v5</span>
+  </div>
+  <div id="tbright">
+    <div class="pill pill-ytdlp" id="pill-ytdlp" title="yt-dlp status">yt-dlp ✓</div>
+    <div class="pill pill-tor"   id="pill-tor"   title="Torrent status">torrent ✓</div>
+    <div id="dirlabel"></div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="tools">
+  <div class="t" onclick="openModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc2)" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+    </svg>Add
+  </div>
+  <div class="t" onclick="action('resume')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--grn)" stroke-width="2">
+      <polygon points="5,3 19,12 5,21"/>
+    </svg>Resume
+  </div>
+  <div class="t" onclick="action('pause')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--ylw)" stroke-width="2">
+      <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+    </svg>Pause
+  </div>
+  <div class="t" onclick="action('stop')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+    </svg>Stop
+  </div>
+  <div class="tsep"></div>
+  <div class="t danger" onclick="action('delete')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3,6 5,6 21,6"/>
+      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+    </svg>Delete
+  </div>
+  <div class="tsep"></div>
+  <div class="t" onclick="post('/api/downloads/resume_all')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--pur)" stroke-width="2">
+      <path d="M5 3l14 9-14 9V3z"/><line x1="19" y1="3" x2="19" y2="21"/>
+    </svg>Resume All
+  </div>
+  <div class="t" onclick="post('/api/downloads/pause_all')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--orng)" stroke-width="2">
+      <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+    </svg>Pause All
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div id="layout">
+
+  <!-- SIDEBAR -->
+  <div id="side">
+    <div class="sh" style="margin-top:8px">Status</div>
+    <div class="si on" onclick="setF('all',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+      </svg>All Downloads<span class="bx bx-def" id="b-all">0</span>
+    </div>
+    <div class="si" onclick="setF('downloading',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="8,17 12,21 16,17"/><line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+      </svg>Downloading<span class="bx bx-def" id="b-dl">0</span>
+    </div>
+    <div class="si" onclick="setF('queued',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>Queued
+    </div>
+    <div class="si" onclick="setF('paused',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+      </svg>Paused
+    </div>
+    <div class="si" onclick="setF('complete',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20,6 9,17 4,12"/>
+      </svg>Completed<span class="bx bx-grn" id="b-done">0</span>
+    </div>
+    <div class="si" onclick="setF('error',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>Errors<span class="bx bx-red" id="b-err" style="display:none">0</span>
+    </div>
+
+    <div class="sh">Type</div>
+    <div class="si" onclick="setF('torrent',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>Torrents
+    </div>
+    <div class="si" onclick="setF('stream',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="23,7 16,12 23,17"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+      </svg>Streaming
+    </div>
+    <div class="si" onclick="setF('direct',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>Direct Files
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+    <div id="addbar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      <input id="urlin" type="text"
+        placeholder="Paste URL / magnet link — or click 📂 to open a .torrent file…"/>
+      <input type="file" id="torrent-file" accept=".torrent" style="display:none" onchange="uploadTorrent(this)"/>
+      <button class="ic" onclick="document.getElementById('torrent-file').click()" title="Open local .torrent file">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        .torrent
+      </button>
+      <button class="btn-add" onclick="addFromBar()">＋ Add Download</button>
+    </div>
+
+    <div id="twrap">
+      <table>
+        <thead><tr>
+          <th class="cname">File Name</th>
+          <th class="csz">Size</th>
+          <th class="cprog">Progress</th>
+          <th class="cspd">Speed</th>
+          <th class="ceta">ETA</th>
+          <th class="cstat">Status</th>
+          <th class="ckind">Type</th>
+          <th class="cadd">Added</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="empty">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <h3>No downloads yet</h3>
+        <p>Paste any URL, magnet link, or .torrent URL above</p>
+      </div>
+    </div>
+
+    <!-- BOTTOM DETAIL -->
+    <div id="bot">
+      <div id="detail">
+        <div id="dtitle">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Select a download to view details
+        </div>
+        <div class="dg">
+          <div class="di"><label>URL</label><span id="d-url">—</span></div>
+          <div class="di"><label>Total Size</label><span id="d-size">—</span></div>
+          <div class="di"><label>Downloaded</label><span id="d-done">—</span></div>
+          <div class="di"><label>Speed</label><span id="d-speed">—</span></div>
+          <div class="di"><label>ETA</label><span id="d-eta">—</span></div>
+          <div class="di"><label>Segments</label><span id="d-conn">—</span></div>
+          <div class="di"><label>Status</label><span id="d-status">—</span></div>
+          <div class="di"><label>Added</label><span id="d-added">—</span></div>
+          <div class="di"><label>Save Path</label><span id="d-path">—</span></div>
+        </div>
+      </div>
+      <div id="spanel">
+        <h4>Speed Graph</h4>
+        <canvas id="sc" width="192" height="58"></canvas>
+        <div class="ss"><span>Now</span><b id="sp-now">—</b></div>
+        <div class="ss"><span>Peak</span><b id="sp-peak">—</b></div>
+        <div class="ss"><span>Active / Total</span><b id="sp-info">0 / 0</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="sbar">
+  <div class="sbi"><div class="dot off" id="dot"></div><span id="stxt">Idle</span></div>
+  <div class="sbi">Files: <b id="st-tot">0</b></div>
+  <div class="sbi">Active: <b id="st-act">0</b></div>
+  <div class="sbi">↓ <b id="st-spd">—</b></div>
+  <div id="sbar-right">FDM v5.0 · IDM-style engine</div>
+</div>
+
+<!-- ADD MODAL -->
+<div id="mo" onclick="if(event.target===this)closeModal()">
+  <div id="modal">
+    <div class="mh">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2">
+        <path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/>
+      </svg>
+      Add New Download
+    </div>
+    <div class="mb">
+      <div class="fg">
+        <label>URL / Magnet Link / .torrent *</label>
+        <input id="m-url" type="text"
+          placeholder="https://… · magnet:?xt=urn:btih:… · https://…/file.torrent"
+          oninput="detectType()"/>
+      </div>
+      <div id="url-hint">
+        <span id="uh-kind"></span>
+      </div>
+      <div class="fr">
+        <div class="fg">
+          <label>Save As (optional)</label>
+          <input id="m-name" type="text" placeholder="Auto-detected from URL"/>
+        </div>
+        <div class="fg">
+          <label>Segments (HTTP only)</label>
+          <select id="m-segs">
+            <option value="16">16 — Maximum speed</option>
+            <option value="8" selected>8 — Recommended</option>
+            <option value="4">4</option>
+            <option value="1">1 — Single stream</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <div class="fg">
+          <label>Save Directory</label>
+          <input id="m-dir" type="text" placeholder="Default: ~/Downloads/FDM/"/>
+        </div>
+        <div class="fg">
+          <label>Start</label>
+          <select id="m-start">
+            <option value="true">Immediately</option>
+            <option value="false">Queue only</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="mf-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-add" onclick="confirmAdd()">Start Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx">
+  <div class="ci" onclick="ctxDo('resume')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="5,3 19,12 5,21"/>
+    </svg>Resume
+  </div>
+  <div class="ci" onclick="ctxDo('pause')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+    </svg>Pause
+  </div>
+  <div class="ci" onclick="ctxDo('stop')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+    </svg>Stop
+  </div>
+  <div class="csep"></div>
+  <div class="ci" onclick="ctxDo('copy')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>Copy URL
+  </div>
+  <div class="csep"></div>
+  <div class="ci d" onclick="ctxDo('delete')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3,6 5,6 21,6"/>
+      <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+    </svg>Delete
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let dls = [], selId = null, ctxId = null, filter = 'all';
+let hist = new Array(60).fill(0), peak = 0;
+
+const fmt = b => {
+  if (!b || b === 0) return '0 B';
+  if (b < 1024)        return b + ' B';
+  if (b < 1048576)     return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824)  return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+};
+const fmtS = b => (!b || b === 0) ? '—' : fmt(b) + '/s';
+
+const pCls = s => ({
+  downloading:'act', complete:'done', paused:'pause', error:'err',
+  connecting:'conn', merging:'merg', queued:'pause'
+})[s] || 'pause';
+
+// ── API ──
+const apiFetch = async (url, opts = {}) => {
+  try {
+    const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    return r.ok ? r.json() : null;
+  } catch { return null; }
+};
+const post = (url, body = null) =>
+  apiFetch(url, { method: 'POST', body: body ? JSON.stringify(body) : null });
+const del  = url => apiFetch(url, { method: 'DELETE' });
+
+// ── SSE ──
+function startSSE() {
+  const es = new EventSource('/api/stream');
+  es.onmessage = e => { dls = JSON.parse(e.data); render(); };
+  es.onerror   = () => setTimeout(startSSE, 3000);
+}
+
+// ── VISIBLE ──
+function visible() {
+  switch (filter) {
+    case 'torrent':     return dls.filter(d => d.kind === 'torrent');
+    case 'stream':      return dls.filter(d => d.kind === 'stream');
+    case 'direct':      return dls.filter(d => d.kind === 'direct');
+    case 'all':         return dls;
+    default:            return dls.filter(d => d.status === filter);
+  }
+}
+
+// ── RENDER ──
+function render() {
+  const vis   = visible();
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+
+  empty.style.display = vis.length ? 'none' : 'flex';
+  if (!vis.length) { tbody.innerHTML = ''; updateStats(); return; }
+
+  const html = vis.map(d => {
+    const pct  = d.pct || 0;
+    const nc   = d.status === 'complete' ? 'var(--grn)'
+               : d.status === 'error'    ? 'var(--red)'
+               : 'var(--txt)';
+    const kb   = `<span class="kb kb-${d.kind}">${
+      d.kind === 'torrent' ? '⬡ TORRENT'
+      : d.kind === 'stream' ? '▶ STREAM'
+      : '↓ DIRECT'
+    }</span>`;
+    return `<tr data-id="${d.id}" class="${d.id === selId ? 'sel' : ''}"
+        onclick="selectDl('${d.id}')" oncontextmenu="showCtx(event,'${d.id}')">
+      <td class="cname" title="${d.filename}">
+        <b style="color:${nc};font-weight:500">${d.filename}</b>
+      </td>
+      <td class="csz">${d.total_size > 0 ? fmt(d.total_size) : '?'}</td>
+      <td class="cprog">
+        <div class="pw">
+          <div class="pf ${pCls(d.status)}" style="width:${pct}%"></div>
+        </div>
+        <div class="pt">${pct}%${d.total_size > 0 ? ' · ' + fmt(d.downloaded) : ''}</div>
+      </td>
+      <td class="cspd">${fmtS(d.speed)}</td>
+      <td class="ceta">${d.eta || '—'}</td>
+      <td class="cstat"><span class="sb sb-${d.status}">${d.status}</span></td>
+      <td class="ckind">${kb}</td>
+      <td class="cadd">${d.added}</td>
+    </tr>`;
+  }).join('');
+
+  if (tbody.innerHTML !== html) tbody.innerHTML = html;
+  updateStats();
+  if (selId) { const d = dls.find(x => x.id === selId); if (d) updateDetail(d); }
+}
+
+function updateStats() {
+  const cnt = s => dls.filter(d => d.status === s).length;
+  document.getElementById('b-all').textContent  = dls.length;
+  document.getElementById('b-dl').textContent   = cnt('downloading');
+  document.getElementById('b-done').textContent = cnt('complete');
+  const ec = cnt('error');
+  const eb = document.getElementById('b-err');
+  eb.textContent   = ec;
+  eb.style.display = ec ? '' : 'none';
+
+  const active   = dls.filter(d => d.status === 'downloading');
+  const totalSpd = active.reduce((s, d) => s + d.speed, 0);
+  hist.push(totalSpd); hist.shift();
+  if (totalSpd > peak) peak = totalSpd;
+
+  document.getElementById('st-tot').textContent  = dls.length;
+  document.getElementById('st-act').textContent  = active.length;
+  document.getElementById('st-spd').textContent  = fmtS(totalSpd);
+  document.getElementById('sp-now').textContent  = fmtS(totalSpd);
+  document.getElementById('sp-peak').textContent = fmtS(peak);
+  document.getElementById('sp-info').textContent = `${active.length} / ${dls.length}`;
+
+  const dot = document.getElementById('dot');
+  if (active.length) {
+    dot.className = 'dot on';
+    document.getElementById('stxt').textContent =
+      `Downloading ${active.length} file${active.length > 1 ? 's' : ''}`;
+  } else {
+    dot.className = 'dot off';
+    document.getElementById('stxt').textContent = 'Idle';
+  }
+  drawGraph();
+}
+
+function selectDl(id) {
+  selId = id;
+  const d = dls.find(x => x.id === id);
+  if (d) updateDetail(d);
+  render();
+}
+
+function updateDetail(d) {
+  document.getElementById('dtitle').textContent = d.filename;
+  const u = d.url;
+  document.getElementById('d-url').textContent    = u.length > 65 ? u.slice(0,62) + '…' : u;
+  document.getElementById('d-size').textContent   = d.total_size > 0 ? fmt(d.total_size) : 'Unknown';
+  document.getElementById('d-done').textContent   = fmt(d.downloaded) + (d.total_size > 0 ? ` (${d.pct}%)` : '');
+  document.getElementById('d-speed').textContent  = fmtS(d.speed);
+  document.getElementById('d-eta').textContent    = d.eta || '—';
+  document.getElementById('d-conn').textContent   = d.connections + (d.kind === 'torrent' ? ' peers' : ' segments');
+  document.getElementById('d-status').textContent = d.status + (d.error_msg ? ' — ' + d.error_msg : '');
+  document.getElementById('d-added').textContent  = d.added;
+  document.getElementById('d-path').textContent   = d.save_path;
+}
+
+function drawGraph() {
+  const cv = document.getElementById('sc');
+  const cx = cv.getContext('2d');
+  const W  = cv.offsetWidth || 192;
+  const H  = cv.offsetHeight || 58;
+  cv.width = W; cv.height = H;
+  cx.clearRect(0, 0, W, H);
+
+  const max = Math.max(...hist, 1);
+  const pts = hist.map((v, i) => ({
+    x: i / (hist.length - 1) * W,
+    y: H - (v / max) * H * 0.85
+  }));
+
+  const g = cx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(14,165,233,.35)');
+  g.addColorStop(1, 'rgba(14,165,233,0)');
+
+  cx.beginPath();
+  cx.moveTo(0, H);
+  pts.forEach(p => cx.lineTo(p.x, p.y));
+  cx.lineTo(W, H);
+  cx.closePath();
+  cx.fillStyle = g;
+  cx.fill();
+
+  cx.beginPath();
+  pts.forEach((p, i) => i ? cx.lineTo(p.x, p.y) : cx.moveTo(p.x, p.y));
+  cx.strokeStyle = '#0ea5e9';
+  cx.lineWidth   = 1.5;
+  cx.stroke();
+
+  // Grid
+  cx.strokeStyle = 'rgba(30,45,66,.8)';
+  cx.lineWidth   = .5;
+  [1, 2, 3].forEach(i => {
+    cx.beginPath();
+    cx.moveTo(0, H * i / 4);
+    cx.lineTo(W, H * i / 4);
+    cx.stroke();
+  });
+}
+
+// ── DETECT URL TYPE ──
+function detectType() {
+  const url = document.getElementById('m-url').value.trim();
+  const hint = document.getElementById('url-hint');
+  const kspan = document.getElementById('uh-kind');
+  if (!url) { hint.style.display = 'none'; return; }
+
+  let kind = '', color = '';
+  if (url.startsWith('magnet:') || url.toLowerCase().endsWith('.torrent')) {
+    kind = '⬡ TORRENT';
+    color = 'rgba(139,92,246,.3); color:#a78bfa';
+  } else if (/youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|instagram\.com|twitch\.tv|twitter\.com|x\.com/i.test(url)) {
+    kind = '▶ STREAMING (yt-dlp)';
+    color = 'rgba(244,63,94,.3); color:#fb7185';
+  } else if (url.startsWith('http')) {
+    kind = '↓ DIRECT FILE';
+    color = 'rgba(14,165,233,.3); color:var(--acc2)';
+  } else {
+    hint.style.display = 'none'; return;
+  }
+
+  kspan.textContent = kind;
+  kspan.style.cssText = `border-color:${color}`;
+  hint.style.display = 'flex';
+}
+
+// ── MODAL ──
+function openModal() {
+  const v = document.getElementById('urlin').value.trim();
+  if (v) { document.getElementById('m-url').value = v; detectType(); }
+  document.getElementById('mo').classList.add('show');
+  setTimeout(() => document.getElementById('m-url').focus(), 50);
+}
+function closeModal() {
+  document.getElementById('mo').classList.remove('show');
+}
+
+async function confirmAdd() {
+  const url = document.getElementById('m-url').value.trim();
+  if (!url) {
+    document.getElementById('m-url').style.borderColor = 'var(--red)';
+    return;
+  }
+  document.getElementById('m-url').style.borderColor = '';
+  const res = await post('/api/downloads', {
+    url,
+    filename: document.getElementById('m-name').value.trim() || null,
+    save_dir: document.getElementById('m-dir').value.trim() || null,
+    segments: +document.getElementById('m-segs').value,
+    start:    document.getElementById('m-start').value === 'true',
+  });
+  if (res) {
+    toast(`Added: ${res.filename}`, 'grn');
+    document.getElementById('urlin').value  = '';
+    document.getElementById('m-url').value  = '';
+    document.getElementById('m-name').value = '';
+    document.getElementById('url-hint').style.display = 'none';
+    closeModal();
+  } else {
+    toast('Failed — check URL / server logs', 'red');
+  }
+}
+
+async function uploadTorrent(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';  // reset so same file can be re-selected
+  toast(`Loading: ${file.name}`, 'acc');
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await fetch('/api/torrent/upload', { method: 'POST', body: form });
+    const data = await r.json();
+    if (r.ok) {
+      toast(`⬡ Torrent started: ${data.filename}`, 'grn');
+    } else {
+      toast(`Error: ${data.error}`, 'red');
+    }
+  } catch(e) {
+    toast('Upload failed — is server running?', 'red');
+  }
+}
+
+function addFromBar() {
+  const url = document.getElementById('urlin').value.trim();
+  if (!url) {
+    document.getElementById('urlin').style.borderColor = 'var(--red)';
+    setTimeout(() => document.getElementById('urlin').style.borderColor = '', 1500);
+    return;
+  }
+  document.getElementById('m-url').value = url;
+  detectType();
+  openModal();
+}
+
+// ── ACTIONS ──
+function action(a) {
+  if (!selId) return;
+  if (a === 'resume') post(`/api/downloads/${selId}/resume`);
+  else if (a === 'pause') post(`/api/downloads/${selId}/pause`);
+  else if (a === 'stop') post(`/api/downloads/${selId}/stop`);
+  else if (a === 'delete') { del(`/api/downloads/${selId}`); selId = null; }
+}
+
+function setF(f, el) {
+  filter = f;
+  document.querySelectorAll('.si').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+  render();
+}
+
+// ── CONTEXT MENU ──
+function showCtx(e, id) {
+  e.preventDefault(); e.stopPropagation();
+  ctxId = id; selId = id;
+  const m  = document.getElementById('ctx');
+  m.style.display = 'block';
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = (e.clientX + mw > innerWidth  ? e.clientX - mw : e.clientX) + 'px';
+  m.style.top  = (e.clientY + mh > innerHeight ? e.clientY - mh : e.clientY) + 'px';
+}
+
+async function ctxDo(a) {
+  document.getElementById('ctx').style.display = 'none';
+  const id = ctxId;
+  if      (a === 'resume') await post(`/api/downloads/${id}/resume`);
+  else if (a === 'pause')  await post(`/api/downloads/${id}/pause`);
+  else if (a === 'stop')   await post(`/api/downloads/${id}/stop`);
+  else if (a === 'delete') { await del(`/api/downloads/${id}`); if (selId === id) selId = null; }
+  else if (a === 'copy') {
+    const d = dls.find(x => x.id === id);
+    if (d) { navigator.clipboard.writeText(d.url); toast('URL copied!'); }
+  }
+}
+
+// ── TOAST ──
+function toast(msg, type = 'acc') {
+  const colors = { grn: 'var(--grn)', red: 'var(--red)', acc: 'var(--acc)' };
+  const t = document.getElementById('toast');
+  const d = document.createElement('div');
+  d.className = 'tn';
+  d.style.borderLeft = `3px solid ${colors[type] || colors.acc}`;
+  d.textContent = msg;
+  t.appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+// ── EVENTS ──
+document.addEventListener('click', () => document.getElementById('ctx').style.display = 'none');
+document.addEventListener('keydown', e => {
+  if (e.key === 'Delete' && selId) action('delete');
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('urlin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addFromBar();
+});
+document.getElementById('m-url').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmAdd();
+});
+
+// ── INIT ──
+fetch('/api/stats').then(r => r.json()).then(d => {
+  document.getElementById('dirlabel').textContent = '📁 ' + d.download_dir;
+  const py = document.getElementById('pill-ytdlp');
+  const pt = document.getElementById('pill-tor');
+  if (!d.ytdlp) {
+    py.textContent = 'yt-dlp ✗';
+    py.className   = 'pill pill-off';
+  }
+  if (!d.torrent) {
+    pt.textContent = 'torrent ✗';
+    pt.className   = 'pill pill-off';
+  }
+});
+
+startSSE();
+drawGraph();
+</script>
+</body>
+</html>

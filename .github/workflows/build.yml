@@ -1,0 +1,85 @@
+name: Build FDM Desktop App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # Manual trigger
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: FDM-Windows
+            exe_name: FDM.exe
+          - os: macos-latest
+            artifact_name: FDM-macOS
+            exe_name: FDM
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install flask requests pywebview pyinstaller yt-dlp
+
+      # ── Windows-specific: install webview2 runtime ──
+      - name: Install webview2 (Windows)
+        if: runner.os == 'Windows'
+        run: pip install pywebview[cef]
+
+      # ── macOS-specific: install ffmpeg ──
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      # ── Windows-specific: install ffmpeg ──
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y
+
+      # ── Build ──
+      - name: Build with PyInstaller
+        run: python build.py
+
+      # ── Upload artifact ──
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.exe_name }}*
+          retention-days: 30
+
+  # ── Create a release with both builds ──
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: FDM Build ${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            FDM-Windows/FDM.exe
+            FDM-macOS/FDM
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
