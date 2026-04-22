@@ -58,6 +58,21 @@ def _find_ffmpeg():
 
 FFMPEG_PATH = _find_ffmpeg()
 
+def _find_js_runtime():
+    """Auto-detect deno or node for yt-dlp JS challenge solving."""
+    for runtime in ("deno", "node", "nodejs"):
+        path = shutil.which(runtime)
+        if path:
+            return runtime
+    # Common macOS Homebrew locations
+    for candidate in ("/opt/homebrew/bin/deno", "/usr/local/bin/deno",
+                      "/opt/homebrew/bin/node", "/usr/local/bin/node"):
+        if Path(candidate).exists():
+            return candidate
+    return None
+
+JS_RUNTIME = _find_js_runtime()
+
 STREAM_HOSTS = {
     "youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com",
     "music.youtube.com", "vimeo.com", "www.vimeo.com",
@@ -383,6 +398,9 @@ class DownloadTask:
                 }
             ],
         }
+        # Pass JS runtime so yt-dlp can solve YouTube's JS challenges
+        if JS_RUNTIME:
+            opts["js_runtimes"] = [JS_RUNTIME]
 
         info = None
         try:

@@ -1,5 +1,5 @@
 flask
 requests
 pywebview
-yt-dlp
+yt-dlp>=2026.3.17
 pyinstaller
