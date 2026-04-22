@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FDM – Free Download Manager</title>
+  <meta name="description" content="FDM v5.0 – A blazing-fast, IDM-style free download manager. Multi-segment HTTP, YouTube/streaming downloads, torrent & magnet support. Free for Windows & macOS." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #060912;
+      --surface:  #0d1117;
+      --card:     rgba(255,255,255,0.04);
+      --border:   rgba(255,255,255,0.08);
+      --blue:     #3b82f6;
+      --blue-glow:#1d4ed8;
+      --cyan:     #22d3ee;
+      --purple:   #a855f7;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --win-color:#0078d4;
+      --mac-color:#555555;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      backdrop-filter: blur(20px);
+      background: rgba(6,9,18,0.8);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .nav-logo span { color: var(--cyan); }
+    .nav-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--blue);
+      color: #fff !important;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 600 !important;
+      transition: background 0.2s, transform 0.15s !important;
+    }
+    .nav-cta:hover { background: var(--blue-glow) !important; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8rem 1.5rem 4rem;
+      overflow: hidden;
+    }
+
+    /* Animated radial glow */
+    .hero-glow {
+      position: absolute;
+      top: 20%; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.18) 0%, rgba(168,85,247,0.1) 40%, transparent 70%);
+      animation: pulse-glow 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+      50%       { transform: translateX(-50%) scale(1.1); opacity: 1; }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--cyan);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.9rem;
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hero h1 {
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--cyan) 50%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 3rem;
+      font-weight: 400;
+    }
+
+    .download-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.95rem 2rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:hover { transform: translateY(-3px); }
+
+    .btn-windows {
+      background: linear-gradient(135deg, #0078d4, #005a9e);
+      color: #fff;
+      box-shadow: 0 4px 30px rgba(0,120,212,0.35);
+    }
+    .btn-windows:hover { box-shadow: 0 8px 40px rgba(0,120,212,0.55); }
+
+    .btn-mac {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .btn-mac:hover { background: rgba(255,255,255,0.11); }
+
+    .btn-icon { font-size: 1.3rem; }
+    .btn-sub { font-size: 0.7rem; font-weight: 400; opacity: 0.75; display: block; }
+
+    .hero-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ── STATS ── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+    /* ── FEATURES ── */
+    section { padding: 5rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+
+    .section-label {
+      text-align: center;
+      color: var(--cyan);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 3rem;
+      line-height: 1.65;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.8rem;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover { border-color: rgba(59,130,246,0.35); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .feature-icon.blue   { background: rgba(59,130,246,0.15); }
+    .feature-icon.cyan   { background: rgba(34,211,238,0.12); }
+    .feature-icon.purple { background: rgba(168,85,247,0.12); }
+    .feature-icon.green  { background: rgba(34,197,94,0.12); }
+    .feature-icon.orange { background: rgba(249,115,22,0.12); }
+    .feature-icon.pink   { background: rgba(236,72,153,0.12); }
+
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p  { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+    .step { text-align: center; }
+    .step-num {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1rem;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+    }
+    .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .step p   { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+
+    /* ── PLATFORMS ── */
+    .platforms {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+    .platform-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .platform-card:hover { transform: translateY(-5px); box-shadow: 0 25px 60px rgba(0,0,0,0.5); }
+    .platform-card.win { border-color: rgba(0,120,212,0.3); }
+    .platform-card.mac { border-color: rgba(255,255,255,0.12); }
+
+    .platform-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .platform-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .platform-card p  { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.8rem; line-height: 1.5; }
+
+    .btn-download-win {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #0078d4, #005a9e);
+      color: #fff;
+      padding: 0.8rem 1.8rem;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(0,120,212,0.3);
+    }
+    .btn-download-win:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,120,212,0.5); }
+
+    .btn-download-mac {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      padding: 0.8rem 1.8rem;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn-download-mac:hover { background: rgba(255,255,255,0.14); transform: translateY(-2px); }
+
+    .platform-meta { margin-top: 0.8rem; color: var(--muted); font-size: 0.78rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── SCROLL ANIMATIONS ── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 1rem; }
+      .nav-links { display: none; }
+      .hero h1 { letter-spacing: -1px; }
+      .stats { gap: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-icon">⬇</div>
+    FDM <span>v5</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it Works</a>
+    <a href="#download">Download</a>
+    <a href="https://github.com/Abishek-03-abi/fdm" target="_blank">GitHub</a>
+    <a href="https://github.com/Abishek-03-abi/fdm/releases/latest" class="nav-cta" id="nav-download">Download Free</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="badge">
+    <div class="badge-dot"></div>
+    Free & Open Source · v5.0
+  </div>
+
+  <h1>
+    Download Anything,<br/>
+    <span class="gradient">Blazing Fast.</span>
+  </h1>
+
+  <p>
+    FDM is a free IDM-style download manager with multi-segment acceleration, 
+    YouTube &amp; streaming support, and torrent/magnet downloads — all in one app.
+  </p>
+
+  <div class="download-buttons">
+    <a id="btn-win" href="https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM.exe"
+       class="btn btn-windows">
+      <span class="btn-icon">🪟</span>
+      <span>
+        Download for Windows
+        <span class="btn-sub">FDM.exe · Free</span>
+      </span>
+    </a>
+    <a id="btn-mac" href="https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM"
+       class="btn btn-mac">
+      <span class="btn-icon">🍎</span>
+      <span>
+        Download for macOS
+        <span class="btn-sub">Universal Binary · Free</span>
+      </span>
+    </a>
+  </div>
+
+  <p class="hero-note">🔒 No ads. No tracking. No subscription. 100% free forever.</p>
+</section>
+
+<!-- STATS -->
+<div class="stats fade-in">
+  <div class="stat">
+    <div class="stat-num">8×</div>
+    <div class="stat-label">Faster with multi-segment</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">1000+</div>
+    <div class="stat-label">Streaming sites supported</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">2</div>
+    <div class="stat-label">Platforms: Windows &amp; macOS</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">0</div>
+    <div class="stat-label">Cost — forever free</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything you need to download</h2>
+  <p class="section-sub">Packed with power-user features out of the box — no extensions, no premium tiers.</p>
+
+  <div class="features-grid">
+    <div class="feature-card fade-in">
+      <div class="feature-icon blue">⚡</div>
+      <h3>Multi-Segment Acceleration</h3>
+      <p>Splits files into up to 8 simultaneous segments — like IDM — for maximum download speed over any connection.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="feature-icon cyan">🎬</div>
+      <h3>YouTube & Streaming</h3>
+      <p>Download from YouTube, Vimeo, TikTok, Instagram, Twitter and 1000+ sites via yt-dlp. Best quality, auto-merged to MP4.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="feature-icon purple">🌊</div>
+      <h3>Torrent & Magnet Links</h3>
+      <p>Full BitTorrent support with libtorrent. Paste a magnet link or drop a .torrent file — downloads start instantly.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="feature-icon green">🔄</div>
+      <h3>Dynamic Segment Rebalancing</h3>
+      <p>Intelligent watchdog detects stalled segments and automatically reassigns bandwidth for consistent top speed.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="feature-icon orange">⏸️</div>
+      <h3>Pause & Resume</h3>
+      <p>Pause any download and resume exactly where you left off — even after restarting the app.</p>
+    </div>
+    <div class="feature-card fade-in">
+      <div class="feature-icon pink">🖥️</div>
+      <h3>Native Desktop App</h3>
+      <p>Runs as a true native desktop app using a local web UI — no browser extension or cloud account needed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="padding-top:0">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Up and running in seconds</h2>
+  <p class="section-sub">No Python, no setup, no configuration. Just download and go.</p>
+
+  <div class="steps">
+    <div class="step fade-in">
+      <div class="step-num">1</div>
+      <h3>Download the app</h3>
+      <p>Grab FDM.exe (Windows) or the macOS binary from the releases page below.</p>
+    </div>
+    <div class="step fade-in">
+      <div class="step-num">2</div>
+      <h3>Double-click to launch</h3>
+      <p>No installer needed. The app opens a beautiful desktop window instantly.</p>
+    </div>
+    <div class="step fade-in">
+      <div class="step-num">3</div>
+      <h3>Paste your URL</h3>
+      <p>Drop in any URL — HTTP file, YouTube link, magnet URI, or .torrent file.</p>
+    </div>
+    <div class="step fade-in">
+      <div class="step-num">4</div>
+      <h3>Watch it fly</h3>
+      <p>FDM splits, accelerates, and downloads at full speed automatically.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download" style="padding-top:0">
+  <div class="section-label">Download</div>
+  <h2 class="section-title">Available for Windows &amp; macOS</h2>
+  <p class="section-sub">Choose your platform. Both are 100% free with no limitations.</p>
+
+  <div class="platforms">
+    <div class="platform-card win fade-in">
+      <div class="platform-icon">🪟</div>
+      <h3>Windows</h3>
+      <p>Works on Windows 10 and 11. No installer, no admin rights needed — just run FDM.exe.</p>
+      <a href="https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM.exe"
+         class="btn-download-win">
+        ⬇ Download FDM.exe
+      </a>
+      <div class="platform-meta">Windows 10 / 11 · x64 &amp; ARM</div>
+    </div>
+
+    <div class="platform-card mac fade-in">
+      <div class="platform-icon">🍎</div>
+      <h3>macOS</h3>
+      <p>Universal binary — runs natively on both Apple Silicon (M1/M2/M3) and Intel Macs.</p>
+      <a href="https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM"
+         class="btn-download-mac">
+        ⬇ Download for macOS
+      </a>
+      <div class="platform-meta">macOS 11+ · Apple Silicon &amp; Intel</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--muted);font-size:0.85rem;margin-top:1.5rem;">
+    All releases available on <a href="https://github.com/Abishek-03-abi/fdm/releases" style="color:var(--blue);text-decoration:none;">GitHub Releases</a>
+  </p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>
+    Built with ❤️ · 
+    <a href="https://github.com/Abishek-03-abi/fdm">View on GitHub</a> · 
+    <a href="https://github.com/Abishek-03-abi/fdm/releases">All Releases</a> · 
+    <a href="https://github.com/Abishek-03-abi/fdm/issues">Report a Bug</a>
+  </p>
+  <p style="margin-top:0.5rem;font-size:0.78rem;opacity:0.5;">FDM v5.0 · Free &amp; Open Source · MIT License</p>
+</footer>
+
+<script>
+  // Auto-detect OS and highlight the right download button
+  const isWin = navigator.platform.startsWith('Win') || navigator.userAgent.includes('Windows');
+  const isMac = navigator.platform.startsWith('Mac') || navigator.userAgent.includes('Macintosh');
+  if (isWin) {
+    document.getElementById('btn-win').style.boxShadow = '0 0 0 3px rgba(59,130,246,0.5), 0 8px 40px rgba(0,120,212,0.55)';
+    document.getElementById('nav-download').href = 'https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM.exe';
+  } else if (isMac) {
+    document.getElementById('btn-mac').style.background = 'rgba(255,255,255,0.14)';
+    document.getElementById('nav-download').href = 'https://github.com/Abishek-03-abi/fdm/releases/latest/download/FDM';
+  }
+
+  // Intersection Observer for fade-in animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
