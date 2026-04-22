@@ -399,8 +399,10 @@ class DownloadTask:
             ],
         }
         # Pass JS runtime so yt-dlp can solve YouTube's JS challenges
+        # Format: {runtime_name: {"path": "/path/to/binary"}}
         if JS_RUNTIME:
-            opts["js_runtimes"] = [JS_RUNTIME]
+            rt_path = shutil.which(JS_RUNTIME) or JS_RUNTIME
+            opts["js_runtimes"] = {JS_RUNTIME: {"path": rt_path}}
 
         info = None
         try:
