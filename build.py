@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FDM Build Script — Builds the desktop app using PyInstaller.
+FDM Build Script - Builds the desktop app using PyInstaller.
 Usage:  python build.py
 Output: dist/FDM.app (macOS) or dist/FDM.exe (Windows)
 """
@@ -9,6 +9,10 @@ import os
 import sys
 import subprocess
 import platform
+
+# Force UTF-8 output so Windows cmd does not throw UnicodeEncodeError
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 
 def main():
@@ -71,7 +75,7 @@ def main():
 
     if result.returncode == 0:
         print(f"\n{'='*50}")
-        print(f"  ✅ Build successful!")
+        print("  [OK] Build successful!")
         if system == "Darwin":
             print(f"  Output: dist/FDM.app")
         elif system == "Windows":
@@ -80,7 +84,7 @@ def main():
             print(f"  Output: dist/FDM")
         print(f"{'='*50}\n")
     else:
-        print(f"\n  ❌ Build failed with exit code {result.returncode}")
+        print(f"\n  [FAILED] Build failed with exit code {result.returncode}")
         sys.exit(1)
 
 
