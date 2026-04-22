@@ -355,24 +355,36 @@ class DownloadTask:
         task = self
         safe_out = str(self.save_dir / f"fdm_{self.id}.%(ext)s")
 
+        # Immediately show activity so UI doesn't stay at "connecting"
+        self.status   = "fetching"
+        self.filename = "Fetching video info…"
+
         class YTLogger:
-            def debug(self, m):   pass
+            def debug(self, m):
+                # Surface important debug lines to task filename during fetch
+                if "Downloading webpage" in m or "Extracting" in m:
+                    task.filename = "Fetching title…"
             def warning(self, m): pass
-            def error(self, m):   task.error = m
+            def error(self, m):
+                task.error = m
+
+        _last_dl = [0]   # mutable cell to track cumulative bytes
 
         def hook(d):
             if task._stop.is_set():
                 raise yt_dlp.utils.DownloadCancelled()
             st = d.get("status")
             if st == "downloading":
-                task.status    = "downloading"
+                task.status = "downloading"
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                 dl    = d.get("downloaded_bytes", 0)
                 spd   = d.get("speed") or 0
                 if total:
                     task.total = total
-                delta = dl - task.downloaded
+                # Track delta correctly against last reported value
+                delta = dl - _last_dl[0]
                 if delta > 0:
+                    _last_dl[0]     = dl
                     task.downloaded = dl
                     task._tick(delta)
                 if spd:
@@ -391,15 +403,17 @@ class DownloadTask:
             "logger":              YTLogger(),
             "quiet":               True,
             "no_warnings":         True,
+            # Allow yt-dlp to fetch remote challenge solvers for YouTube
+            "extractor_args":      {"youtube": {"player_client": ["web", "android"]}},
             "postprocessors": [
                 {
-                    "key":             "FFmpegVideoConvertor",
-                    "preferedformat":  "mp4",
+                    "key":            "FFmpegVideoConvertor",
+                    "preferedformat": "mp4",
                 }
             ],
         }
-        # Pass JS runtime so yt-dlp can solve YouTube's JS challenges
-        # Format: {runtime_name: {"path": "/path/to/binary"}}
+
+        # Pass JS runtime so yt-dlp can solve YouTube JS challenges
         if JS_RUNTIME:
             rt_path = shutil.which(JS_RUNTIME) or JS_RUNTIME
             opts["js_runtimes"] = {JS_RUNTIME: {"path": rt_path}}
